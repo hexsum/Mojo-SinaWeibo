@@ -65,6 +65,7 @@ API调用示例
 核心依赖模块
 
    Mojolicious
+   Crypt::RSA
    Encode::Locale
 
 版本更新记录
