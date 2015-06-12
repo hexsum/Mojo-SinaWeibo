@@ -1,0 +1,80 @@
+Mojo-SinaWeibo v1.0
+========================
+使用Perl语言编写的SinaWeibo客户端SDK，基于Mojolicious，要求Perl版本高于5.10
+实现新浪微博登录和私信功能，能够通过微博私信和微软小冰进行问答
+其他微博功能敬请期待
+
+使用说明
+
+   1）准备一个可以和小冰正常私信往来的微博帐号
+   2）推荐微博帐号进行手机绑定，并设置常用登录地点免验证码登录（可以避免输入验证码带来的麻烦）
+   3）通过SDK提供的函数接口或者使用内置的API server来和小冰互动
+
+SDK示例代码
+
+    use Mojo::SinaWeibo;
+    use Data::Dumper;
+    my $m = Mojo::SinaWeibo->new(
+         ua_debug=>0,
+         log_level=>"info",
+         user=>'xxxxx',#微博帐号
+         pwd=>'xxxx',  #帐号密码
+    );
+    $m->ask_xiaoice("你是谁",sub{print Dumper \@_}); #中文使用UTF8编码
+    $m->run(enable_api_server=>1,host=>127.0.0.0,port=>8000);
+
+API调用示例
+
+    > GET /openxiaoice/ask?q=hello HTTP/1.1
+    > User-Agent: curl/7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5 OpenSSL/0.9.8b zlib/1.2.3 libidn/0.6.5
+    > Host: 127.0.0.1:8000
+    > Accept: */*
+    > 
+    < HTTP/1.1 200 OK
+    < Server: Mojolicious (Perl)
+    < Content-Type: application/json;charset=UTF-8
+    < Connection: keep-alive
+    < Date: Fri, 12 Jun 2015 08:01:08 GMT
+    < Content-Length: 52
+    Connection #0 to host 127.0.0.1 left intact
+    * Closing connection #0
+    {"code":1,"answer":"hello.这么巧你也失眠了"}
+
+运行日志
+
+    [15/06/12 16:00:47] [info] 准备登录微博帐号[ xxxx ]
+    [15/06/12 16:00:47] [info] 正在登录...
+    [15/06/12 16:00:49] [info] 登录成功
+    [15/06/12 16:00:49] [info] http server available at 0.0.0.0:8000
+    [15/06/12 16:00:49] [私信消息] 我->小冰 : 你是谁
+    [15/06/12 16:00:51] [私信消息] 我->小冰 : howareyou
+    [15/06/12 16:00:51] [私信消息] 小冰 : 我是小灰啊，陪在你身边的知心人
+    [15/06/12 16:00:52] [私信消息] 小冰 : 我爸爸给我买了个表
+    [15/06/12 16:01:00] [私信消息] 我->小冰 : hello
+    [15/06/12 16:01:08] [私信消息] 小冰 : hello.这么巧你也失眠了
+
+安装步骤
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+   
+   推荐使用CPAN安装 Mojo::SinaWeibo
+
+核心依赖模块
+
+   Mojolicious
+   Encode::Locale
+
+版本更新记录
+
+  请参见 Changes 文件
+
+COPYRIGHT 和 LICENCE
+
+Copyright (C) 2014 by sjdy521
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
+at your option, any later version of Perl 5 you may have available.

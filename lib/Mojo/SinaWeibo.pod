@@ -1,0 +1,98 @@
+=pod
+
+=encoding utf8
+
+=head1 NAME
+
+Mojo::SinaWeibo - A SinaWeibo XiaoIce SDK and API
+
+=head1 SYNOPSIS
+
+    use Mojo::SinaWeibo;
+    use Data::Dumper;
+    my $m = Mojo::SinaWeibo->new(
+         ua_debug=>0,
+         log_level=>"info",
+         user=>'xxxxx',#微博帐号
+         pwd=>'xxxx',  #帐号密码
+    );
+    $m->ask_xiaoice("你是谁",sub{print Dumper \@_}); #中文使用UTF8编码
+    $m->run(enable_api_server=>1,host=>127.0.0.0,port=>8000);
+
+=head1 DESCRIPTION
+
+基于新浪微博网页版私聊功能实现的微软小冰SDK，支持函数或者HTTP API调用形式
+
+当前主要的以实现小冰问答功能，后续会考虑实现新浪微博其他功能，要玩转本模块，你需要做一些准备下工作：
+
+   1）准备一个可以和小冰正常私信往来的微博帐号
+   2）推荐微博帐号进行手机绑定，并设置常用登录地点免验证码登录（可以避免输入验证码带来的麻烦）
+   3）通过SDK提供的函数接口或者使用内置的API server来和小冰互动
+
+=head1 客户端属性
+
+    ua_debug   #0|1 是否打印http协议或Websocket协议的调试信息
+    log_level  #日志等级，默认info
+    log_path   #日志记录路径，默认STDERR
+    user       #新浪微博帐号
+    pwd        #新浪微博帐号密码
+
+    timeout    #私信超时时间
+    login_type #rsa|wsse 微博登录加密算法，当前仅支持rsa登录加密算法，wsse无法正常登录
+    api_form   #JSON|HTML 微博api接口返回类型，当前仅能够在HTML模式下正常工作
+
+=head1 客户端方法
+
+=head2 new  客户端初始化
+
+    my $client = Mojo::SinaWeibo->new(ua_debug=>0,);
+
+=head2 ask_xiaoice 询问小冰
+
+    $client->ask_xiaoice("你好",sub{
+        my($msg,$status)=@_;
+        if($status->{is_success}){
+            print "小冰说:" . $msg->{content};
+        }  
+        else{
+            print "回复失败,原因:" . $status->{msg};
+        }
+    }); 
+
+=head2 run 客户端进入时间循环
+
+可以在run方法参数中设置是否本地开启api server
+
+    $client->run()
+    $client->run(enable_api_server=>1,host=>0.0.0.0,port=>80);    
+
+=head1 客户端事件
+
+=head2 receive_message 接收到私信消息
+
+    $client->on(receive_message=>sub{
+        my ($msg,$status)=@_;
+        ...;
+    });
+
+=head2 send_message  发送私信消息
+
+=head1 SEE ALSO
+
+L<Mojo::Webqq>
+
+L<Mojolicious>
+
+=head1 AUTHOR
+
+sjdy521, E<lt>sjdy521@163.comE<gt>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (C) 2014 by sjdy521
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.10.0 or,
+at your option, any later version of Perl 5 you may have available.
+
+=cut
