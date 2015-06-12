@@ -10,6 +10,7 @@ WriteMakefile(
     PREREQ_PM         => {
         "Mojolicious"           => '6.11',
         "IO::Socket::SSL"       => '1.94',
+        "Crypt::RSA"            => 0,
         "Encode::Locale"        => 0,
     }, # e.g., Module::Name => 1.1
     dist              => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
