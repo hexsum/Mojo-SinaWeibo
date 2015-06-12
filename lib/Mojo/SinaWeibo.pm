@@ -149,8 +149,8 @@ sub auth {
     if($s->login_state eq "success"){
         return $s
     }
-    $s->fatal("授权失败，程序退出");
-    exit;
+    $s->fatal("授权失败，程序停止");
+    $s->login_state("stop");
 }
 sub login {
     my $s = shift;
@@ -588,7 +588,10 @@ sub im_speek{
     my $content = shift;
     my $callback = pop;
     $content = decode("utf8",$content) if defined $content;
-
+    if($s->login_state eq "stop"){
+        $callback->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")});
+        return;
+    }
     $s->auth() if $s->login_state eq "invalid";
     #timeout handle
     my $id;
@@ -650,6 +653,7 @@ sub im_send{
             my($msg,$status) = @_;
             if(defined $msg){
                 $msg->{nick} = encode("utf8",$msg->{nick});
+                $msg->{content} = encode("utf8",$msg->{content});
             }
             $status->{msg} = encode("utf8",$status->{msg});
             $cb->{cb}->($msg,$status);
@@ -696,7 +700,7 @@ sub run{
         $s->auth();
     });
 
-    if($p{enable_api_server} ==1){
+    if(exists $p{enable_api_server} and $p{enable_api_server} ==1){
         package Mojo::SinaWeibo::Openxiaoice;
         use Encode;
         use Mojolicious::Lite;
