@@ -8,6 +8,8 @@ Mojo::SinaWeibo - A SinaWeibo XiaoIce SDK and API
 
 =head1 SYNOPSIS
 
+SDK示例代码
+
     use Mojo::SinaWeibo;
     use Data::Dumper;
     my $m = Mojo::SinaWeibo->new(
@@ -18,6 +20,36 @@ Mojo::SinaWeibo - A SinaWeibo XiaoIce SDK and API
     );
     $m->ask_xiaoice("你是谁",sub{print Dumper \@_}); #中文使用UTF8编码
     $m->run(enable_api_server=>1,host=>127.0.0.0,port=>8000);
+
+API调用示例
+
+    > GET /openxiaoice/ask?q=hello HTTP/1.1
+    > User-Agent: curl/7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5
+    > Host: 127.0.0.1:8000
+    > Accept: */*
+    > 
+    < HTTP/1.1 200 OK
+    < Server: Mojolicious (Perl)
+    < Content-Type: application/json;charset=UTF-8
+    < Connection: keep-alive
+    < Date: Fri, 12 Jun 2015 08:01:08 GMT
+    < Content-Length: 52
+    Connection #0 to host 127.0.0.1 left intact
+    * Closing connection #0
+    {"code":1,"answer":"hello.这么巧你也失眠了"}
+
+运行日志
+
+    [15/06/12 16:00:47] [info] 准备登录微博帐号[ xxxx ]
+    [15/06/12 16:00:47] [info] 正在登录...
+    [15/06/12 16:00:49] [info] 登录成功
+    [15/06/12 16:00:49] [info] http server available at 0.0.0.0:8000
+    [15/06/12 16:00:49] [私信消息] 我->小冰 : 你是谁
+    [15/06/12 16:00:51] [私信消息] 我->小冰 : howareyou
+    [15/06/12 16:00:51] [私信消息] 小冰 : 我是小灰啊，陪在你身边的知心人
+    [15/06/12 16:00:52] [私信消息] 小冰 : 我爸爸给我买了个表
+    [15/06/12 16:01:00] [私信消息] 我->小冰 : hello
+    [15/06/12 16:01:08] [私信消息] 小冰 : hello.这么巧你也失眠了
 
 =head1 DESCRIPTION
 
