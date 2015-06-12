@@ -1,5 +1,5 @@
 package Mojo::SinaWeibo;
-$Mojo::SinaWeibo::VERSION = "1.0";
+$Mojo::SinaWeibo::VERSION = "1.1";
 use Mojo::Base 'Mojo::EventEmitter';
 use Mojo::JSON qw(encode_json decode_json);
 use Mojo::Util qw(b64_encode dumper sha1_sum url_escape url_unescape encode decode);
@@ -11,7 +11,6 @@ use Carp;
 use Time::HiRes qw();
 use List::Util qw(first);
 use Mojo::IOLoop;
-use Mojo::IOLoop::Delay;
 use File::Temp qw/tempfile/;
 use Encode::Locale ;
 use Fcntl ':flock';
