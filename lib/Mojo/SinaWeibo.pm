@@ -22,7 +22,7 @@ has log_level               => 'info';     #debug|info|warn|error|fatal
 has log_path                => undef;
 
 has max_timeout_count       => 3;
-has timeout                 => 8;
+has timeout                 => 10;
 has timeout_count           => 0;
 
 has log => sub{
@@ -147,9 +147,10 @@ sub auth {
     $s->prelogin();
     $s->login();
     if($s->login_state eq "success"){
+        $s->timeout_count(0);
         return $s
     }
-    $s->fatal("授权失败，程序停止");
+    $s->fatal("授权失败，程序处于离线状态");
     $s->login_state("stop");
 }
 sub login {
@@ -509,8 +510,15 @@ sub parse_im_msg{
         elsif($m->{channel} eq "/meta/subscribe"){
             return unless $m->{successful};
             $s->debug("收到服务器订阅响应消息");
-            $s->im_send($s->gen_im_msg("cmd",cmd=>"usersetting"));
-            $s->im_send($s->gen_im_msg("cmd",cmd=>"recents"));
+            if(@{$s->im_user} == 0){
+                $s->im_send($s->gen_im_msg("cmd",cmd=>"usersetting"));
+                $s->im_send($s->gen_im_msg("cmd",cmd=>"recents"));
+            }
+            else{
+                $s->im_ready(1);
+                $s->debug("私信服务器状态准备就绪");
+                $s->emit("im_ready");
+            }
         }
         elsif($m->{channel} eq "/im/req"){
             next unless $m->{successful};
@@ -519,9 +527,11 @@ sub parse_im_msg{
             return unless exists $m->{data}{type};
             if($m->{data}{type} eq "recents"){
                 $s->im_user([ map {{uid=>$_->[0],nick=>$_->[1]}} @{$m->{data}{recents}} ]);
-                $s->im_ready(1);
-                $s->debug("私信服务器状态准备就绪");
-                $s->emit("im_ready");
+                if(!$s->im_ready){
+                    $s->im_ready(1);
+                    $s->debug("私信服务器状态准备就绪");
+                    $s->emit("im_ready");
+                }
             }            
 
             elsif( $m->{data}{type} eq "msg"){
@@ -594,31 +604,16 @@ sub im_speek{
     }
     $s->auth() if $s->login_state eq "invalid";
     #timeout handle
-    my $id;
     my $cb = {
         cb=>sub{
-            Mojo::IOLoop->remove($id);
+            #Mojo::IOLoop->remove($id);
             $callback->(@_) if ref $callback eq "CODE"; 
         },
         status => 'wait',
-        msg=>undef,
     };
-    $id = $s->timer($s->timeout,sub{
-        $cb->{status} = 'abort';
-        $callback->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $callback eq "CODE";
-        $s->warn("消息响应超时");
-        my $count = $s->timeout_count;
-        $s->timeout_count(++$count);
-        if($s->timeout_count >= $s->max_timeout_count){
-            $s->im_ready(0);
-            $s->login_state("invalid");
-            $s->emit("invalid");
-        }
-    }); 
-    #
+    $s->timer($s->timeout,sub{$s->emit(im_timeout=>$cb);});
     if($s->im_ready){
         my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
-        $cb->{msg} = $msg;
         $s->im_send($msg,$cb);
         
     }
@@ -627,7 +622,6 @@ sub im_speek{
             my $s = shift;
             return if $cb->{status} eq "abort";
             my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
-            $cb->{msg} = $msg;
             $s->im_send($msg,$cb);
         });
         $s->im_init();
@@ -657,6 +651,7 @@ sub im_send{
             }
             $status->{msg} = encode("utf8",$status->{msg});
             $cb->{cb}->($msg,$status);
+            $cb->{status} = "done";
         });
         #push @{$s->im_send_callback},$cb;
     };
@@ -680,7 +675,22 @@ sub im_send{
 }
 sub run{
     my $s = shift;
-    my %p = @_ if @_%2==0;
+    my %p = @_ if @_>1 and @_%2==0;
+    $s->on(im_timeout=>sub{
+        my $s = shift;
+        my $cb = shift;
+        return if $cb->{status} eq "done";
+        $s->warn("私信消息响应超时,放弃等待");
+        $cb->{status} = 'abort';
+        $cb->{cb}->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $cb->{cb} eq "CODE";
+        my $count = $s->timeout_count;
+        $s->timeout_count(++$count);
+        if($s->timeout_count >= $s->max_timeout_count){
+            $s->im_ready(0);
+            $s->login_state("invalid");
+            $s->emit("invalid");
+        }
+    });
     $s->on(receive_message=>sub{
         my $s = shift;
         my $msg = shift;
