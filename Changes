@@ -1,3 +1,10 @@
+2015-06-16 Mojo::SinaWeibo v1.2
+1）当无法正常登录时，不直接退出，仅仅是返回超时错误，以方便和其他事件循环代码配合
+2）优化了回复超时的处理逻辑
+3）修复文档拼写错误
+4）修复设置了个性域名的微博帐号无法正常登录的bug 感谢好友 @Perling 的反馈
+
 2015-06-12 Mojo::SinaWeibo v1.1 release
 1）增加Crypt::RSA依赖模块
+
 2015-06-12 Mojo::SinaWeibo v1.0 release
