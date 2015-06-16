@@ -23,7 +23,7 @@ SDK示例代码
 
 API调用示例
 
-    > GET /openxiaoice/ask?q=hello HTTP/1.1
+    > GET /openxiaoice/ask?q=hello HTTP/1.1  #中文使用UTF-8编码进行urlencode
     > User-Agent: curl/7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5
     > Host: 127.0.0.1:8000
     > Accept: */*

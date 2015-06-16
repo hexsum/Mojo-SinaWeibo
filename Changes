@@ -1,5 +1,8 @@
+2015-06-16 Mojo::SinaWeibo v1.4
+1）修复api接口不支持中文的bug 感谢好友 @Perling 的反馈
+
 2015-06-16 Mojo::SinaWeibo v1.3
-1）修复api接口中文乱码的严重bug，请尽快升级到该版本
+1）修复api接口中文乱码的严重bug
 2）api接口不合法路径请求给出403
 
 2015-06-16 Mojo::SinaWeibo v1.2
