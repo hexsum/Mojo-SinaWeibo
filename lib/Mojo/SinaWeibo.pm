@@ -727,7 +727,7 @@ sub run{
             $s->ask_xiaoice($q,sub{
                 my($msg,$status) = @_;
                 if($status->{is_success}){
-                    $c->render(json=>{code=>1,answer=>$msg->{content}});      
+                    $c->render(json=>{code=>1,answer=>decode("utf8",$msg->{content})});      
                 }
                 else{
                     $c->render(json=>{code=>0,answer=>undef,reason=>decode("utf8",$status->{msg})});
