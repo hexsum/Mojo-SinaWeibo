@@ -91,7 +91,7 @@ API调用示例
         }
     }); 
 
-=head2 run 客户端进入时间循环
+=head2 run 客户端进入事件循环
 
 可以在run方法参数中设置是否本地开启api server
 

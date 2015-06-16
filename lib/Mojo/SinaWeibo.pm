@@ -259,9 +259,15 @@ sub login {
             my $json = decode_json($1);
             return unless $json->{result};
             $s->uid($json->{userinfo}{uniqueid})->home("http://weibo.com/u/$json->{userinfo}{uniqueid}/home");
+            $s->debug("进行首页跳转...");
             if(defined $json->{redirect}){
-                $s->debug("进行首页跳转...");
                 my $tx = $s->ua->get($json->{redirect}) ;
+                return unless $tx->success;
+                $s->login_state("success");
+                $s->info("登录成功");
+            }
+            else{
+                my $tx = $s->ua->get("http://weibo.com/" . $json->{userinfo}{userdomain});
                 return unless $tx->success;
                 $s->login_state("success");
                 $s->info("登录成功");
