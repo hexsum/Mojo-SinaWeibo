@@ -1,5 +1,5 @@
 package Mojo::SinaWeibo;
-$Mojo::SinaWeibo::VERSION = "1.2";
+$Mojo::SinaWeibo::VERSION = "1.3";
 use Mojo::Base 'Mojo::EventEmitter';
 use Mojo::JSON qw(encode_json decode_json);
 use Mojo::Util qw(b64_encode dumper sha1_sum url_escape url_unescape encode decode);
@@ -727,13 +727,14 @@ sub run{
             $s->ask_xiaoice($q,sub{
                 my($msg,$status) = @_;
                 if($status->{is_success}){
-                    $c->render(json=>{code=>1,answer=>decode("utf8",$msg->{content})});      
+                    $c->render(json=>{code=>1,answer=>$msg->{content}});      
                 }
                 else{
                     $c->render(json=>{code=>0,answer=>undef,reason=>decode("utf8",$status->{msg})});
                 }
             });
         };
+        any '/*whatever'  => sub{whatever=>'',$_[0]->render(text => "request error",status=>403)};
         package Mojo::SinaWeibo;          
         require Mojo::SinaWeibo::Server;
         my $data = [{host=>$p{host}||"0.0.0.0",port=>$p{port}||3000}] ;
