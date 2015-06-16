@@ -44,7 +44,6 @@ has log => sub{
             $title = (defined $opt->{"title"})?$opt->{title} . " ":"";
             $level  = $opt->{level} if defined $opt->{"level"};
         }
-        #$level .= " " if ($level eq "info" or $level eq "warn");
         @lines = split /\n/,join "",@lines;
         my $return = "";
         $time = POSIX::strftime('[%y/%m/%d %H:%M:%S]',localtime($time));
@@ -722,12 +721,12 @@ sub run{
         use Mojolicious::Lite;
         any [qw(GET POST)] => '/openxiaoice/ask'         => sub{
             my $c = shift;
-            my $q = $c->param("q");
+            my $q = encode("utf8",$c->param("q"));
             $c->render_later;
             $s->ask_xiaoice($q,sub{
                 my($msg,$status) = @_;
                 if($status->{is_success}){
-                    $c->render(json=>{code=>1,answer=>$msg->{content}});      
+                    $c->render(json=>{code=>1,answer=>decode("utf8",$msg->{content})});      
                 }
                 else{
                     $c->render(json=>{code=>0,answer=>undef,reason=>decode("utf8",$status->{msg})});
