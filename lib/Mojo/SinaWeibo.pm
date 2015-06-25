@@ -607,7 +607,7 @@ sub im_speek{
     $content = decode("utf8",$content) if defined $content;
     $s->auth() if $s->login_state eq "invalid";
     if($s->login_state eq "stop"){
-        $callback->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")});
+        $callback->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $callback eq "CODE";
         return;
     }
     my $delay = 0;
@@ -619,15 +619,17 @@ sub im_speek{
     };
 
     $s->timer($delay,sub{
-        my $ask = {cb=>$callback,,status=>"wait"};
-        my $id = $s->timer($s->timeout,sub{
-            return if $ask->{status} eq "done";
-            $ask->{status} = "done";
-            $ask->{cb}->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $ask->{cb} eq "CODE";
-            $s->warn("消息响应超时，放弃等待");
-        });
-        $ask->{timer} = $id;
-        push @{$s->im_queue},$ask;
+        if(ref $callback eq "CODE"){
+            my $ask = {cb=>$callback,,status=>"wait"};
+            my $id = $s->timer($s->timeout,sub{
+                return if $ask->{status} eq "done";
+                $ask->{status} = "done";
+                $ask->{cb}->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $ask->{cb} eq "CODE";
+                $s->warn("消息响应超时，放弃等待");
+            });
+            $ask->{timer} = $id;
+            push @{$s->im_queue},$ask;
+        }
         if($s->im_ready){
             my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
             $s->im_send($msg);
