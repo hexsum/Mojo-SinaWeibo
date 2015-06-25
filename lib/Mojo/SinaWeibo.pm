@@ -1,5 +1,7 @@
 package Mojo::SinaWeibo;
 $Mojo::SinaWeibo::VERSION = "1.4";
+$Mojo::SinaWeibo::SEND_INTERVAL = 2;
+$Mojo::SinaWeibo::LAST_DISPATCH_TIME = undef;
 use Mojo::Base 'Mojo::EventEmitter';
 use Mojo::JSON qw(encode_json decode_json);
 use Mojo::Util qw(b64_encode dumper sha1_sum url_escape url_unescape encode decode);
@@ -21,8 +23,8 @@ has ua_debug                => 0;
 has log_level               => 'info';     #debug|info|warn|error|fatal
 has log_path                => undef;
 
-has max_timeout_count       => 3;
-has timeout                 => 10;
+has max_timeout_count       => 5;
+has timeout                 => 15;
 has timeout_count           => 0;
 
 has log => sub{
@@ -103,6 +105,7 @@ has 'im_server_lag_data' => sub{[]};
 has 'im_ready' => 0;
 has im_user => sub {[]};
 has 'im_api_server';
+has im_queue => sub {[]};
 
 sub search_im_user{
     my $s = shift;
@@ -545,7 +548,6 @@ sub parse_im_msg{
                     my $u = $s->search_im_user(uid=>$uid);
                     my $nick = defined $u?$u->{nick}:"未知昵称";
                     $s->emit("receive_message",{uid=>$uid,nick=>$nick,content=>$msg,'time'=>int($time/1000)},{is_success=>1,code=>200,msg=>"正常响应"});
-                    $s->emit_one("answer_message",{uid=>$uid,nick=>$nick,content=>$msg,'time'=>int($time/1000)},{is_success=>1,code=>200,msg=>"正常响应"});
                 } 
             }
         
@@ -558,7 +560,7 @@ sub parse_im_msg{
                 my($uid,$msg) = ($syncdata->{uid}, $syncdata->{msg}); 
                 my $u = $s->search_im_user(uid=>$uid);
                 my $nick = defined $u?$u->{nick}:"未知昵称"; 
-                $s->emit("send_message",{uid=>$uid,nick=>$nick,content=>$msg,'time'=>$time});
+                $s->emit("send_message",{uid=>$uid,nick=>$nick,content=>$msg,'time'=>$time},"sync");
             }
         }
     }
@@ -603,34 +605,45 @@ sub im_speek{
     my $content = shift;
     my $callback = pop;
     $content = decode("utf8",$content) if defined $content;
+    $s->auth() if $s->login_state eq "invalid";
     if($s->login_state eq "stop"){
         $callback->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")});
         return;
     }
-    $s->auth() if $s->login_state eq "invalid";
-    #timeout handle
-    my $cb = {
-        cb=>sub{
-            #Mojo::IOLoop->remove($id);
-            $callback->(@_) if ref $callback eq "CODE"; 
-        },
-        status => 'wait',
+    my $delay = 0;
+    my $now = CORE::time;
+    if(defined $Mojo::SinaWeibo::LAST_DISPATCH_TIME){
+        $delay = $now<$Mojo::SinaWeibo::LAST_DISPATCH_TIME+$Mojo::SinaWeibo::SEND_INTERVAL? 
+                    $Mojo::SinaWeibo::LAST_DISPATCH_TIME+$Mojo::SinaWeibo::SEND_INTERVAL-$now
+                :   0;
     };
-    $s->timer($s->timeout,sub{$s->emit(im_timeout=>$cb);});
-    if($s->im_ready){
-        my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
-        $s->im_send($msg,$cb);
-        
-    }
-    else{
-        $s->once(im_ready=>sub{
-            my $s = shift;
-            return if $cb->{status} eq "abort";
-            my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
-            $s->im_send($msg,$cb);
+
+    $s->timer($delay,sub{
+        my $ask = {cb=>$callback,,status=>"wait"};
+        my $id = $s->timer($s->timeout,sub{
+            return if $ask->{status} eq "done";
+            $ask->{status} = "done";
+            $ask->{cb}->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $ask->{cb} eq "CODE";
+            $s->warn("消息响应超时，放弃等待");
         });
-        $s->im_init();
-    }
+        $ask->{timer} = $id;
+        push @{$s->im_queue},$ask;
+        if($s->im_ready){
+            my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
+            $s->im_send($msg);
+            
+        }
+        else{
+            $s->once(im_ready=>sub{
+                my $s = shift;
+                my $msg = $s->gen_im_msg("cmd",cmd=>"msg",uid=>$uid,msg=>$content);
+                $s->im_send($msg);
+            });
+            $s->im_init();
+        }
+    });
+
+    $Mojo::SinaWeibo::LAST_DISPATCH_TIME = $now+$delay;
 
 }
 
@@ -644,22 +657,6 @@ sub ask_xiaoice{
 sub im_send{
     my $s= shift;
     my $msg = shift;
-    my $cb = shift;
-    if($msg->{channel} eq "/im/req" and $msg->{data}{cmd} eq "msg" and ref $cb->{cb} eq "CODE"){
-        $s->once(answer_message=>sub{
-            my $s = shift;
-            return if $cb->{status} eq "abort";
-            my($msg,$status) = @_;
-            if(defined $msg){
-                $msg->{nick} = encode("utf8",$msg->{nick});
-                $msg->{content} = encode("utf8",$msg->{content});
-            }
-            $status->{msg} = encode("utf8",$status->{msg});
-            $cb->{cb}->($msg,$status);
-            $cb->{status} = "done";
-        });
-        #push @{$s->im_send_callback},$cb;
-    };
     $s->im->send({json=>[$msg]},sub{
         print encode_json($msg),"\n" if $s->ua_debug;
         $s->debug("发送usersetting消息") if ($msg->{channel} eq "/im/req" and $msg->{data}{cmd} eq "usersetting");
@@ -674,7 +671,7 @@ sub im_send{
                 nick=>(defined $u?$u->{nick}:"未知昵称"),
                 'time'=>CORE::time,
                 content=>$msg->{data}{msg},
-            }) 
+            },"api") ;
         }
     });
 }
@@ -683,11 +680,9 @@ sub run{
     my %p = @_ if @_>1 and @_%2==0;
     $s->on(im_timeout=>sub{
         my $s = shift;
-        my $cb = shift;
-        return if $cb->{status} eq "done";
+        my $callback = shift;
         $s->warn("私信消息响应超时,放弃等待");
-        $cb->{status} = 'abort';
-        $cb->{cb}->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")}) if ref $cb->{cb} eq "CODE";
+        $callback->(undef,{is_success=>0,code=>503,msg=>encode("utf8","响应超时")});
         my $count = $s->timeout_count;
         $s->timeout_count(++$count);
         if($s->timeout_count >= $s->max_timeout_count){
@@ -699,14 +694,37 @@ sub run{
     $s->on(receive_message=>sub{
         my $s = shift;
         my $msg = shift;
+        my $status = shift;
         return if ref $msg ne "HASH";
         $s->info({level=>"私信消息",'time'=>$msg->{'time'},title=>"$msg->{nick} :"},$msg->{content}); 
+        my $ask = @{$s->im_queue}?shift(@{$s->im_queue}):undef;
+        return unless defined $ask;
+        return if $ask->{status} eq "done";
+        if(ref $ask->{cb} eq "CODE" and defined $msg and defined $status){
+            $ask->{cb}->({
+                    uid=>$msg->{uid},
+                    nick=>encode("utf8",$msg->{nick}),
+                    content=>encode("utf8",$msg->{content}),
+                    'time'=>$msg->{'time'},
+                },
+                {
+                    is_success=>$status->{is_success},
+                    code=>$status->{code},
+                    msg=>encode("utf8",$status->{msg}),
+                }
+            );
+        }
+
+        $ask->{status} = "done";    
+        Mojo::IOLoop->remove($ask->{timer}) if defined $ask->{timer};
     });
     $s->on(send_message=>sub{
         my $s = shift;
         my $msg = shift;
+        my $type =  shift;
         return if ref $msg ne "HASH";
         $s->info({level=>"私信消息",'time'=>$msg->{'time'},title=>"我->$msg->{nick} :"},$msg->{content});
+        push @{$s->im_queue},{cb=>undef,status=>"wait"} if $type eq "sync";
     });
 
     $s->on(invalid=>sub{
@@ -761,7 +779,7 @@ sub timer{
     my $s = shift;
     Mojo::IOLoop->timer(@_);
 }
-sub recurring{
+sub interval{
     my $s = shift;
     Mojo::IOLoop->recurring(@_);
 }
