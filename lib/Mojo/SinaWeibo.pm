@@ -1,5 +1,5 @@
 package Mojo::SinaWeibo;
-$Mojo::SinaWeibo::VERSION = "1.4";
+$Mojo::SinaWeibo::VERSION = "1.5";
 $Mojo::SinaWeibo::SEND_INTERVAL = 2;
 $Mojo::SinaWeibo::LAST_DISPATCH_TIME = undef;
 use Mojo::Base 'Mojo::EventEmitter';

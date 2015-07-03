@@ -1,3 +1,9 @@
+2015-07-03 Mojo::SinaWeibo v1.5
+1）完善消息回复的处理机制
+2）延长默认的消息回复超时时间
+3）增加ioloop属性，可以统一设置ioloop
+4）原来的run方法拆分为start()、run()两个，方便和其他事件循环集成
+
 2015-06-16 Mojo::SinaWeibo v1.4
 1）修复api接口不支持中文的bug 感谢好友 @Perling 的反馈
 
