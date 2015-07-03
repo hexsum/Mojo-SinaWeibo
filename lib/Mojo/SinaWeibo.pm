@@ -22,6 +22,7 @@ has 'pwd';
 has ua_debug                => 0;
 has log_level               => 'info';     #debug|info|warn|error|fatal
 has log_path                => undef;
+has ioloop                  => sub {Mojo::IOLoop->singleton};
 
 has max_timeout_count       => 5;
 has timeout                 => 15;
@@ -677,7 +678,7 @@ sub im_send{
         }
     });
 }
-sub run{
+sub start{
     my $s = shift;
     my %p = @_ if @_>1 and @_%2==0;
     $s->on(im_timeout=>sub{
@@ -718,7 +719,7 @@ sub run{
         }
 
         $ask->{status} = "done";    
-        Mojo::IOLoop->remove($ask->{timer}) if defined $ask->{timer};
+        $s->ioloop->remove($ask->{timer}) if defined $ask->{timer};
     });
     $s->on(send_message=>sub{
         my $s = shift;
@@ -765,10 +766,13 @@ sub run{
         $server->listen($data) if ref $data eq "ARRAY" ;
         $server->start;
     }
-
-    Mojo::IOLoop->start unless Mojo::IOLoop->is_running;
 }
 
+sub run {
+    my $s = shift;
+    $s->start(@_);
+    $s->ioloop->start unless $s->ioloop->is_running;
+}
 sub emit_one{
   my ($s, $name) = (shift, shift);
   if (my $e = $s->{events}{$name}) {
@@ -779,11 +783,11 @@ sub emit_one{
 }
 sub timer{
     my $s = shift;
-    Mojo::IOLoop->timer(@_);
+    $s->ioloop->timer(@_);
 }
 sub interval{
     my $s = shift;
-    Mojo::IOLoop->recurring(@_);
+    $s->ioloop->recurring(@_);
 }
 
 sub die{
