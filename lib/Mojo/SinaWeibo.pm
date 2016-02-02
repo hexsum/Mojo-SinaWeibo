@@ -547,7 +547,7 @@ sub parse_im_msg{
                 for(@{$m->{data}{items}}){
                     my($uid,$msg,$time) = @$_[0..2];
                     my $u = $s->search_im_user(uid=>$uid);
-                    my $nick = defined $u?$u->{nick}:"未知昵称";
+                    my $nick = defined $u?$u->{nick}:"小冰";
                     $s->emit("receive_message",{uid=>$uid,nick=>$nick,content=>$msg,'time'=>int($time/1000)},{is_success=>1,code=>200,msg=>"正常响应"});
                 } 
             }
@@ -560,7 +560,7 @@ sub parse_im_msg{
                 my $time = exists $syncdata->{'time'}?int($syncdata->{'time'}/1000):CORE::time;
                 my($uid,$msg) = ($syncdata->{uid}, $syncdata->{msg}); 
                 my $u = $s->search_im_user(uid=>$uid);
-                my $nick = defined $u?$u->{nick}:"未知昵称"; 
+                my $nick = defined $u?$u->{nick}:"小冰"; 
                 $s->emit("send_message",{uid=>$uid,nick=>$nick,content=>$msg,'time'=>$time},"sync");
             }
         }
@@ -593,7 +593,10 @@ sub im_init{
             my ($tx, $msg) = @_;
             $s->parse_im_msg($msg);
         });
-        if($s->im->is_established){
+        if( 
+            ($s->im->can("is_established") and $s->im->is_established) 
+         or ($s->im->can("established") and $s->im->established)
+        ){
             $s->debug("Websocket服务器连接成功");
             $s->im_send($s->gen_im_msg("handshake"));
         }
@@ -671,7 +674,7 @@ sub im_send{
             my $u=$s->search_im_user(uid=>$msg->{data}{uid});
             $s->emit("send_message"=>{
                 uid=>$msg->{data}{uid},
-                nick=>(defined $u?$u->{nick}:"未知昵称"),
+                nick=>(defined $u?$u->{nick}:"小冰"),
                 'time'=>CORE::time,
                 content=>$msg->{data}{msg},
             },"api") ;
@@ -763,7 +766,7 @@ sub start{
         $server->app($server->build_app("Mojo::SinaWeibo::Openxiaoice"));
         $server->app->secrets("hello world");
         $server->app->log($s->log);
-        $server->listen($data) if ref $data eq "ARRAY" ;
+        $server->listen([ map { 'http://' . (defined $_->{host}?$_->{host}:"0.0.0.0") .":" . (defined $_->{port}?$_->{port}:3000)} @$data]) if ref $data eq "ARRAY" ;
         $server->start;
     }
 }
