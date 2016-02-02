@@ -1,4 +1,4 @@
-Mojo-SinaWeibo v1.5 [![Build Status](https://travis-ci.org/sjdy521/Mojo-SinaWeibo.svg?branch=master)](https://travis-ci.org/sjdy521/Mojo-SinaWeibo)
+Mojo-SinaWeibo v1.6 [![Build Status](https://travis-ci.org/sjdy521/Mojo-SinaWeibo.svg?branch=master)](https://travis-ci.org/sjdy521/Mojo-SinaWeibo)
 ========================
 使用Perl语言编写的新浪微博客户端SDK，基于Mojolicious，要求Perl版本不低于5.10
 实现新浪微博登录和私信功能，能够通过微博私信和微软小冰进行问答
