@@ -117,6 +117,16 @@ Mojo-SinaWeibo v1.6 [![Build Status](https://travis-ci.org/sjdy521/Mojo-SinaWeib
 * Crypt::RSA
 * Encode::Locale
 
+###相关文档
+
+* [更新日志](https://github.com/sjdy521/Mojo-SinaWeibo/blob/master/Changes)
+* [开发文档](https://metacpan.org/pod/Mojo::SinaWeibo)
+
+###官方交流
+
+* [QQ群](http://jq.qq.com/?_wv=1027&k=kjVJzo)
+* [IRC](http://irc.perfi.wang/?channel=#Mojo-Webqq)
+
 ###版本更新记录
 
 请参见 Changes 文件
